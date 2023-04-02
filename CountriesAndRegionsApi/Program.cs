@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Repository.ModelContext;
 using Application.Services.Interfaces;
 using Services;
+using Microsoft.Extensions.Caching.Distributed;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,8 @@ builder.Services.AddControllers();
 
 builder.Services.AddDbContext<CountryContext>();
 builder.Services.AddScoped<ICountryService, CountryService>();
+
+builder.Services.AddMemoryCache();
 
 builder.Services.AddLogging(x => x.AddConsole());
 

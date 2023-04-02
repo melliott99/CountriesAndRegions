@@ -15,14 +15,14 @@ namespace Domain.Models
     [Table("Countries")]
     public class Country
     {
-        //[Key]
-        public int Id { get; set; } 
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int? Id { get; set; } 
         public string Name { get; set; }
         public string CapitalCity { get; set; }
-        public decimal Lattitude { get; set; }
-        public decimal Longitude { get; set; }
+        public decimal? Lattitude { get; set; }
+        public decimal? Longitude { get; set; }
         public int PopulationCount { get; set; }
-        public string ShortCode { get; set; }
-        public List<Regions> OwnedRegions { get; set; }
+        public string? ShortCode { get; set; }
+        public List<Regions>? OwnedRegions { get; set; }
     }
 }

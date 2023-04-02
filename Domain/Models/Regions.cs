@@ -10,11 +10,12 @@ namespace Domain.Models
     [Table("Regions")]
     public class Regions
     {
-        public int Id { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int? Id { get; set; }
         public string Name { get; set; }
-        public string ShortCode { get; set; }
-        public int CountryId { get; set; }
+        public string? ShortCode { get; set; }
+        public int? CountryId { get; set; }
         [JsonIgnore]
-        public Country Country { get; set; }
+        public Country? Country { get; set; }
     }
 }

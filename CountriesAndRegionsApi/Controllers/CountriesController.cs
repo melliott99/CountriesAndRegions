@@ -10,6 +10,7 @@ using Repository.ModelContext;
 using CountriesAndRegionsApi.Infrastructure;
 using Services;
 using Application.Services.Interfaces;
+using System.Diagnostics.Metrics;
 
 namespace CountriesAndRegionsApi.Controllers
 {
@@ -28,10 +29,10 @@ namespace CountriesAndRegionsApi.Controllers
 
         // GET: Countries
         [HttpGet]
-        //[Route(ActionRoutes.Empty)]
+        [Route(ActionRoutes.Empty)]
         [ProducesResponseType(typeof(List<Country>), 200)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public async Task<ActionResult> GetCountries()
+        public async Task<IActionResult> GetCountries()
         {
             var response = await _countryService.GetCountriesAsync();
             if (response == null || !response!.Any())
@@ -41,61 +42,58 @@ namespace CountriesAndRegionsApi.Controllers
             return Ok(response);
         }
 
-        //// GET: Countries/Details/5
-        //public async Task<IActionResult> Details(int? id)
-        //{
-        //    if (id == null || _context.CountryContexts == null)
-        //    {
-        //        return NotFound();
-        //    }
+        //// GET: Countries/{name}
+        [HttpGet]
+        [Route(ActionRoutes.ByName)]
+        [ProducesResponseType(typeof(List<Country>), 200)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetCountriesByName(string name)
+        {
+            var response = await _countryService.GetCountriesByNameAsync(name);
+            if (response == null)
+            {
+                return NotFound();
+            }
+            return Ok(response);
+        }
 
-        //    var country = await _context.CountryContexts
-        //        .FirstOrDefaultAsync(m => m.Id == id);
-        //    if (country == null)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    return View(country);
-        //}
-
-        //// GET: Countries/Create
-        //public IActionResult Create()
-        //{
-        //    return View();
-        //}
-
-        //// POST: Countries/Create
-        //// To protect from overposting attacks, enable the specific properties you want to bind to.
-        //// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        //[HttpPost]
+        // POST: Countries/CreateCountry
+        [HttpPost]
         //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> Create([Bind("Id,Name,CapitalCity,Lattitude,Longitude,PopulationCount,ShortCode")] Country country)
-        //{
-        //    if (ModelState.IsValid)
-        //    {
-        //        _context.Add(country);
-        //        await _context.SaveChangesAsync();
-        //        return RedirectToAction(nameof(Index));
-        //    }
-        //    return View(country);
-        //}
+        [Route(ActionRoutes.CreateCountry)]
+        [ProducesResponseType(typeof(List<Country>), 200)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> CreateCountry([Bind("Name,CapitalCity,Lattitude,Longitude,PopulationCount,ShortCode")] Country country)
+        {
+            if (ModelState.IsValid)
+            {
+                var isSuccessful = await _countryService.AddNewCountry(country);
+                if (isSuccessful)
+                {
+                    return Ok(await _countryService.GetCountriesByNameAsync(country.Name));
+                }
+            }
+            return BadRequest();
+        }
 
-        //// GET: Countries/Edit/5
-        //public async Task<IActionResult> Edit(int? id)
-        //{
-        //    if (id == null || _context.CountryContexts == null)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    var country = await _context.CountryContexts.FindAsync(id);
-        //    if (country == null)
-        //    {
-        //        return NotFound();
-        //    }
-        //    return View(country);
-        //}
+        [HttpPost]
+        //[ValidateAntiForgeryToken]
+        [Route(ActionRoutes.CreateRegion)]
+        [ProducesResponseType(typeof(List<Country>), 200)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> CreateRegion([Bind("Name,ShortCode")] Regions region, string countryName)
+        {
+            if (ModelState.IsValid)
+            {
+                var isSuccessful = await _countryService.AddNewRegion(region, countryName);
+         
+                if (isSuccessful)
+                {
+                    return Ok(await _countryService.GetRegions(countryName));
+                }
+            }
+            return BadRequest();
+        }
 
         //// POST: Countries/Edit/5
         //// To protect from overposting attacks, enable the specific properties you want to bind to.
@@ -164,7 +162,7 @@ namespace CountriesAndRegionsApi.Controllers
         //    {
         //        _context.CountryContexts.Remove(country);
         //    }
-            
+
         //    await _context.SaveChangesAsync();
         //    return RedirectToAction(nameof(Index));
         //}
