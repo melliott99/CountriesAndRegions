@@ -7,6 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace Repository.ModelContext
 {
@@ -21,13 +22,18 @@ namespace Repository.ModelContext
         public DbSet<Regions> RegionContext { get; set; } = null!;
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder
-                .UseSqlServer("Server=(LocalDb)\\MSSQLLocalDB;Database=model;Trusted_Connection=True;");
+            //optionsBuilder.UseSqlServer(Configuration.GetConnectionString("DbContext"));
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Country>().HasKey(c => c.Id);
+            modelBuilder.Entity<Country>()
+                .HasKey(c => c.Id);
+
+
+            modelBuilder.Entity<Country>().HasIndex(c => c.Id)
+                .IsUnique(true);
+
             modelBuilder.Entity<Regions>().HasKey(r => r.Id);
 
             modelBuilder.Entity<Regions>()

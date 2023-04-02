@@ -19,6 +19,14 @@ namespace Application.Services.Interfaces
         Task<List<Country>> GetCountriesAsync();
 
         /// <summary>
+        /// Gets All countries with pagination
+        /// </summary>
+        /// <param name="pageSize"></param>
+        /// <param name="pageNumber"></param>
+        /// <returns></returns>
+        Task<List<Country>> GetCountriesAsync(int pageSize, int pageNumber);
+
+        /// <summary>
         /// Gets a country the user specified
         /// </summary>
         /// <param name="name"></param>

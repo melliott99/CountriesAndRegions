@@ -32,9 +32,17 @@ namespace CountriesAndRegionsApi.Controllers
         [Route(ActionRoutes.Empty)]
         [ProducesResponseType(typeof(List<Country>), 200)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public async Task<IActionResult> GetCountries()
+        public async Task<IActionResult> GetCountries(int? pageSize, int? pageNumber)
         {
-            var response = await _countryService.GetCountriesAsync();
+            List<Country> response = null;
+            if (pageSize != null && pageNumber != null)
+            {
+                response = await _countryService.GetCountriesAsync((int)pageSize!, (int)pageNumber!);
+            }
+            else
+            {
+                response = await _countryService.GetCountriesAsync();
+            }
             if (response == null || !response!.Any())
             {
                 return NoContent();
@@ -59,7 +67,6 @@ namespace CountriesAndRegionsApi.Controllers
 
         // POST: Countries/CreateCountry
         [HttpPost]
-        //[ValidateAntiForgeryToken]
         [Route(ActionRoutes.CreateCountry)]
         [ProducesResponseType(typeof(List<Country>), 200)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -77,7 +84,6 @@ namespace CountriesAndRegionsApi.Controllers
         }
 
         [HttpPost]
-        //[ValidateAntiForgeryToken]
         [Route(ActionRoutes.CreateRegion)]
         [ProducesResponseType(typeof(List<Country>), 200)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -94,77 +100,5 @@ namespace CountriesAndRegionsApi.Controllers
             }
             return BadRequest();
         }
-
-        //// POST: Countries/Edit/5
-        //// To protect from overposting attacks, enable the specific properties you want to bind to.
-        //// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> Edit(int id, [Bind("Id,Name,CapitalCity,Lattitude,Longitude,PopulationCount,ShortCode")] Country country)
-        //{
-        //    if (id != country.Id)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    if (ModelState.IsValid)
-        //    {
-        //        try
-        //        {
-        //            _context.Update(country);
-        //            await _context.SaveChangesAsync();
-        //        }
-        //        catch (DbUpdateConcurrencyException)
-        //        {
-        //            if (!CountryExists(country.Id))
-        //            {
-        //                return NotFound();
-        //            }
-        //            else
-        //            {
-        //                throw;
-        //            }
-        //        }
-        //        return RedirectToAction(nameof(Index));
-        //    }
-        //    return View(country);
-        //}
-
-        //// GET: Countries/Delete/5
-        //public async Task<IActionResult> Delete(int? id)
-        //{
-        //    if (id == null || _context.CountryContexts == null)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    var country = await _context.CountryContexts
-        //        .FirstOrDefaultAsync(m => m.Id == id);
-        //    if (country == null)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    return View(country);
-        //}
-
-        //// POST: Countries/Delete/5
-        //[HttpPost, ActionName("Delete")]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> DeleteConfirmed(int id)
-        //{
-        //    if (_context.CountryContexts == null)
-        //    {
-        //        return Problem("Entity set 'CountryContext.CountryContexts'  is null.");
-        //    }
-        //    var country = await _context.CountryContexts.FindAsync(id);
-        //    if (country != null)
-        //    {
-        //        _context.CountryContexts.Remove(country);
-        //    }
-
-        //    await _context.SaveChangesAsync();
-        //    return RedirectToAction(nameof(Index));
-        //}
     }
 }

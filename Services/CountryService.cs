@@ -5,16 +5,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Repository.ModelContext;
-using Microsoft.Extensions.Caching.Distributed;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.Metrics;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
-using System.Transactions;
-using System.Xml;
 
 namespace Services
 {
@@ -24,6 +15,8 @@ namespace Services
         private readonly ILogger<CountryService> _logger;
         private readonly IMemoryCache _cache;
 
+        private const string ALLCOUNTRYKEY = "all_countries";
+
         public CountryService(CountryContext context, ILogger<CountryService> logger, IMemoryCache cache) 
         {
             _context = context;
@@ -32,32 +25,62 @@ namespace Services
         }
 
         /// <inheritdoc/>
+        public async Task<List<Country>> GetCountriesAsync(int pageSize, int pageNumber)
+        {
+            //Implements Pagination
+            var countries = await _context.CountryContexts
+                .OrderBy(c => c.Name)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(c => new Country
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    CapitalCity = c.CapitalCity,
+                    Lattitude = c.Lattitude,
+                    Longitude = c.Longitude,
+                    PopulationCount = c.PopulationCount,
+                    ShortCode = c.ShortCode,
+                    OwnedRegions = c.OwnedRegions.Select(r => new Regions
+                    {
+                        Id = r.Id,
+                        Name = r.Name,
+                        ShortCode = r.ShortCode,
+                        CountryId = r.CountryId
+
+                    }).ToList()
+                }).AsNoTracking().ToListAsync();
+            return countries;
+        }
+
+        /// <inheritdoc/>
         public async Task<List<Country>> GetCountriesAsync()
         {
-            var cacheKey = "all_countries";
+            var cacheKey = ALLCOUNTRYKEY;
             if (_cache.TryGetValue(cacheKey, out List<Country> cachedCountries))
             {
                 return cachedCountries;
             }
 
-            var countries = await _context.CountryContexts.Select(c => new Country
-            {
-                Id = c.Id,
-                Name = c.Name,
-                CapitalCity = c.CapitalCity,
-                Lattitude = c.Lattitude,
-                Longitude = c.Longitude,
-                PopulationCount = c.PopulationCount,
-                ShortCode = c.ShortCode,
-                OwnedRegions = c.OwnedRegions.Select(r => new Regions
+            var countries = await _context.CountryContexts
+                .Select(c => new Country
                 {
-                    Id = r.Id,
-                    Name = r.Name,
-                    ShortCode = r.ShortCode,
-                    CountryId = r.CountryId
+                    Id = c.Id,
+                    Name = c.Name,
+                    CapitalCity = c.CapitalCity,
+                    Lattitude = c.Lattitude,
+                    Longitude = c.Longitude,
+                    PopulationCount = c.PopulationCount,
+                    ShortCode = c.ShortCode,
+                    OwnedRegions = c.OwnedRegions.Select(r => new Regions
+                    {
+                        Id = r.Id,
+                        Name = r.Name,
+                        ShortCode = r.ShortCode,
+                        CountryId = r.CountryId
 
-                }).ToList()
-            }).AsNoTracking().ToListAsync();
+                    }).ToList()
+                }).AsNoTracking().ToListAsync();
 
             CacheResults(countries, cacheKey);
 
@@ -67,6 +90,12 @@ namespace Services
         /// <inheritdoc/>
         public async Task<Country> GetCountriesByNameAsync(string name)
         {
+            var cacheKey = $"{name}_cache";
+            if (_cache.TryGetValue(cacheKey, out Country cachedCountry))
+            {
+                return cachedCountry;
+            }
+
             Country? country = null;
 
             country = await _context.CountryContexts.Select(c => new Country
@@ -87,42 +116,52 @@ namespace Services
 
                 }).ToList()
             }).AsNoTracking().FirstOrDefaultAsync(c => name.Equals(c.Name));
-            
+
+            CacheResults(country, cacheKey);
+
             return country;
         }
 
         /// <inheritdoc/>
         public async Task<bool> AddNewCountry(Country newCountry)
         {
+            var cacheKey = $"{newCountry.Name}_cache";
             var isSuccessful = false;
-            if (!CheckCountryExistAsync(newCountry.Name).Result)
+            var exists = await CheckCountryExistAsync(newCountry.Name);
+            if (!exists)
             {
                 await _context.CountryContexts.AddAsync(newCountry);
                 await _context.SaveChangesAsync();
                 isSuccessful = true;
             }
+            _cache.Remove(ALLCOUNTRYKEY);
             return isSuccessful;
         }
 
         /// <inheritdoc/>
         public async Task<bool> AddNewRegion(Regions newRegion, string countryName)
         {
+            var cacheKey = $"{countryName}_cache";
             var isSuccessful = false;
-            if (CheckCountryExistAsync(countryName).Result)
+            if (await CheckCountryExistAsync(countryName))
             {
                 var country = await GetCountriesByNameAsync(countryName);
 
-                //Check Region isn't already in there
+                //Check Region doesn't already exist
                 Dictionary<string, Regions> regions = country.OwnedRegions.ToDictionary(r => r.Name, r => r);
                 if (!regions.ContainsKey(newRegion.Name))
                 {
                     newRegion.CountryId = country.Id;
-                    newRegion.Country = country;
+
                     country.OwnedRegions.Add(newRegion);
+                    await _context.RegionContext.AddAsync(newRegion); 
+
                     await _context.SaveChangesAsync();
                     isSuccessful = true;
                 }
             }
+            _cache.Remove(ALLCOUNTRYKEY);
+            _cache.Remove(cacheKey);
             return isSuccessful;
         }
 
@@ -147,6 +186,11 @@ namespace Services
         public void CacheResults(List<Country> countries, string cacheKey)
         {
             _cache.Set(cacheKey, countries, TimeSpan.FromHours(1));
+        }
+
+        public void CacheResults(Country country, string cacheKey)
+        {
+            _cache.Set(cacheKey, country, TimeSpan.FromHours(1));
         }
     }
 }
